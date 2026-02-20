@@ -2,4 +2,4 @@ This repository contains a full-stack TypeScript application used across multipl
 
 Please checkout the branch corresponding to the assessment you are taking:
 
-[https://github.com/trilogy-group/ws-eng-conduit-ai-assessment/tree/rwa/feature-development-v5](https://github.com/trilogy-group/ws-eng-event-ticketing-assessment/tree/rwa/feature-development-v1)
+(https://github.com/trilogy-group/ws-eng-event-ticketing-assessment/tree/rwa/feature-development-v1)
