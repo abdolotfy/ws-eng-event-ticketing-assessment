@@ -143,7 +143,7 @@ Spend time exploring the code to understand:
 - **Use the Correct Branch:** Ensure you are on the correct assessment branch.
 - **Single AI Tool:** Use Cline exclusively for AI interactions.
 - **Include Screenshots:** Include screenshots of the acceptance tests passing. If you submit without screenshots, you'll get 0 stars on completeness.
-- **Start with Decisions:** Fill in `DECISIONS.md` before coding. Document your approach, reasoning, and any questions about the requirements. Decision quality is part of your evaluation.
+- **Start with Decisions:** Fill in `DECISIONS.md` before coding. Document your approach, reasoning, and any questions about the requirements. **An empty or template-only DECISIONS.md will cap your grade regardless of code quality.**
 - **Preserve Cline History:** Do not clear your Cline chat history. If you submit without Cline history, you'll get 0 stars.
 - **Code Must Compile:** Ensure your backend compiles without errors. Code that fails to compile will be penalized regardless of other scores.
 
@@ -250,12 +250,12 @@ npm run db:reset
 
 ## Evaluation Criteria
 
-| **Criteria** | **Weight** | **No Hire (0-59)** | **Hire (60-79)** | **Strong Hire (80-100)** |
-|---|---|---|---|---|
-| **Engineering Judgment** | 40% | Used existing code and patterns without evaluating them. No evidence of auditing shared utilities, reviewing data consistency, or reasoning about architectural choices. | Evaluated existing code before building on it. Identified issues in the codebase and made deliberate choices. DECISIONS.md explains reasoning. | Thorough audit of shared code and data. Found and fixed bugs in existing utilities. Optimal data model choices. Addressed data inconsistencies. DECISIONS.md shows clear trade-off reasoning. |
-| **Completeness** | 25% | Most features broken or missing screenshot evidence. | Core features work. Some acceptance tests passing with screenshots. | All 10 acceptance tests passing with clear screenshot evidence. |
-| **Test Cases** | 20% | No tests written. | Tests for one story, or basic happy-path coverage only. | Both stories tested with edge cases and regression tests for bugs found. |
-| **Velocity** | 15% | Not completed or took over 8 hours. | Completed in 3-8 hours. | Completed in 3 hours or less. |
+| **Criteria** | **Weight** | **0 Stars** | **1 Star** | **2 Stars** | **3 Stars** |
+|---|---|---|---|---|---|
+| **Engineering Judgment** | 40% | Used existing code without reading or evaluating it. No reasoning in DECISIONS.md. | Read existing code but followed default patterns without questioning them. Some reasoning documented. | Evaluated existing code before building on it. Made deliberate architectural choices with documented reasoning. Identified issues in the codebase. | Thorough audit of shared utilities and data. Sound architectural decisions with clear trade-off reasoning in DECISIONS.md. Addressed inconsistencies found in the codebase. |
+| **Completeness** | 25% | Most features broken or missing screenshot evidence. | One story partially working. Some screenshots present. | Core features of both stories working. Most acceptance tests passing with screenshots. | All 10 acceptance tests passing with clear screenshot evidence. Both stories fully functional. |
+| **Test Cases** | 20% | No tests written. | A few happy-path tests for one story. | Tests for both stories, or thorough coverage of one story including edge cases. | Both stories tested with edge cases and regression tests for issues discovered in the codebase. |
+| **Velocity** | 15% | Not completed or took significantly longer than expected. | Completed partially within the time window. | Completed in 3-8 hours. | Completed in 3 hours or less. |
 
 ## Next Steps
 
