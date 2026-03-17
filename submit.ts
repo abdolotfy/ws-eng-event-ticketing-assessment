@@ -30,7 +30,7 @@ function decode(s: string): string {
 
 function execCommand(command: string): string {
   try {
-    return execSync(command).toString().trim();
+    return execSync(command, { maxBuffer: 50 * 1024 * 1024 }).toString().trim();
   } catch (error) {
     console.error(`❌ Error executing command: ${command}`, error);
     return '';
@@ -80,7 +80,7 @@ async function createGitDiff(): Promise<string> {
   execCommand(`git commit --allow-empty -am "chore(event-ticketing): Generates patch."`);
   const remoteName = execCommand('git remote').split('\n')[0]?.trim() || 'origin';
   const diffOutput = execCommand(
-    `git diff ${remoteName}/${ASSESSMENT_BRANCH}...HEAD -- . ":!DECISIONS.md" ":!*.patch" ":!yarn.lock" ":!package-lock.json" ":!**/tsconfig*.json"`,
+    `git diff ${remoteName}/${ASSESSMENT_BRANCH}...HEAD -- . ":!DECISIONS.md" ":!*.patch" ":!yarn.lock" ":!**/package-lock.json" ":!**/tsconfig*.json"`,
   );
   const diffPath = path.join(SUBMISSION_DIR, 'submission.patch');
   if (!diffOutput?.trim()) {
