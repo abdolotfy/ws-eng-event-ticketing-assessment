@@ -69,6 +69,24 @@ async function countFilesByExtension(extensions = ['.json']): Promise<number> {
   }
 }
 
+function ensureCorrectOrigin(): string {
+  const remoteName = execCommand('git remote').split('\n')[0]?.trim() || 'origin';
+  const currentUrl = execCommand(`git remote get-url ${remoteName}`).trim();
+  const expectedUrls = [
+    REPO_GIT_URL,
+    REPO_GIT_URL.replace('.git', ''),
+    REPO_GIT_URL.replace('https://github.com/', 'git@github.com:'),
+  ];
+  if (!expectedUrls.some((url) => currentUrl.startsWith(url))) {
+    console.log(`⚠️ Origin remote points to '${currentUrl}' instead of the assessment repo.`);
+    console.log(`Fixing: setting ${remoteName} URL to '${REPO_GIT_URL}'...`);
+    execCommand(`git remote set-url ${remoteName} ${REPO_GIT_URL}`);
+    execCommand(`git fetch ${remoteName} ${ASSESSMENT_BRANCH}`);
+    console.log('✅ Origin corrected and assessment branch fetched.');
+  }
+  return remoteName;
+}
+
 async function createGitDiff(): Promise<string> {
   try {
     console.log("Disabling GPG signing - this is safe because we're not pushing our commits.");
@@ -76,18 +94,15 @@ async function createGitDiff(): Promise<string> {
   } catch {
     console.log("⚠️ Unable to disable signing. If you get errors about GPG signing, please disable signing in your git config.");
   }
+  const remoteName = ensureCorrectOrigin();
   execCommand('git add --all');
   execCommand(`git commit --allow-empty -am "chore(event-ticketing): Generates patch."`);
-  const remoteName = execCommand('git remote').split('\n')[0]?.trim() || 'origin';
   const diffOutput = execCommand(
     `git diff ${remoteName}/${ASSESSMENT_BRANCH}...HEAD -- . ":!DECISIONS.md" ":!*.patch" ":!yarn.lock" ":!**/package-lock.json" ":!**/tsconfig*.json"`,
   );
   const diffPath = path.join(SUBMISSION_DIR, 'submission.patch');
   if (!diffOutput?.trim()) {
-    console.log("⚠️ No code changes were detected. This may mean that you forked or created your own copy of the repository.");
-    console.log(`If so, reset your git origin to '${REPO_GIT_URL}'.`);
-    console.log(`You can do so by running 'git remote set-url origin ${REPO_GIT_URL}'.`);
-    console.log("Afterward, please run the submit script again to properly detect your code changes.");
+    console.log("⚠️ No code changes were detected. Please ensure you have committed your changes.");
   }
   await fs.writeFile(diffPath, diffOutput || '');
   return diffPath;
