@@ -28,10 +28,11 @@ function decode(s: string): string {
   return s.split('').map(translate).join('');
 }
 
-function execCommand(command: string): string {
+function execCommand(command: string, { throwOnError = false } = {}): string {
   try {
     return execSync(command, { maxBuffer: 50 * 1024 * 1024 }).toString().trim();
   } catch (error) {
+    if (throwOnError) throw error;
     console.error(`❌ Error executing command: ${command}`, error);
     return '';
   }
@@ -97,9 +98,27 @@ async function createGitDiff(): Promise<string> {
   const remoteName = ensureCorrectOrigin();
   execCommand('git add --all');
   execCommand(`git commit --allow-empty -am "chore(event-ticketing): Generates patch."`);
-  const diffOutput = execCommand(
-    `git diff ${remoteName}/${ASSESSMENT_BRANCH}...HEAD -- . ":!DECISIONS.md" ":!*.patch" ":!yarn.lock" ":!**/package-lock.json" ":!**/tsconfig*.json"`,
-  );
+
+  let diffOutput = '';
+  try {
+    diffOutput = execCommand(
+      `git diff ${remoteName}/${ASSESSMENT_BRANCH}...HEAD -- . ":!DECISIONS.md" ":!*.patch" ":!yarn.lock" ":!**/package-lock.json" ":!**/tsconfig*.json" ":!**/node_modules/**"`,
+      { throwOnError: true },
+    );
+  } catch (error) {
+    console.error('❌ Failed to generate code diff. Retrying...');
+    execCommand(`git fetch ${remoteName} ${ASSESSMENT_BRANCH}`);
+    try {
+      diffOutput = execCommand(
+        `git diff ${remoteName}/${ASSESSMENT_BRANCH}...HEAD -- . ":!DECISIONS.md" ":!*.patch" ":!yarn.lock" ":!**/package-lock.json" ":!**/tsconfig*.json" ":!**/node_modules/**"`,
+        { throwOnError: true },
+      );
+    } catch (retryError) {
+      console.error('❌ Failed to generate code diff after retry. Your submission will have an empty patch.');
+      console.error('   Please ensure you have committed your changes and try submitting again.');
+    }
+  }
+
   const diffPath = path.join(SUBMISSION_DIR, 'submission.patch');
   if (!diffOutput?.trim()) {
     console.log("⚠️ No code changes were detected. Please ensure you have committed your changes.");
@@ -136,7 +155,7 @@ async function getSubmissionWarnings(diffPath: string): Promise<string[]> {
               validTasks.push(taskId);
             }
           } catch (error) {
-            console.warn(`⚠️  Could not read ${apiHistoryPath}:`, error);
+            // Expected for task dirs without conversation history — skip silently
           }
         }
       }
@@ -186,7 +205,7 @@ async function getClineHistoryPath(): Promise<string | null> {
               return basePath;
             }
           } catch (error) {
-            console.warn(`⚠️  Could not read ${apiHistoryPath}:`, error);
+            // Expected for task dirs without conversation history — skip silently
           }
         }
       }
@@ -273,14 +292,14 @@ async function addClineHistory(zip: JSZip): Promise<void> {
         await addFileToZip(zip, apiHistoryPath, `cline_history/${taskId}/api_conversation_history.json`);
         savedFiles++;
       } catch (error) {
-        console.warn(`⚠️  Could not add ${apiHistoryPath} to zip:`, error);
+        // Task dir without api history — skip
       }
 
       try {
         await addFileToZip(zip, uiMessagesPath, `cline_history/${taskId}/ui_messages.json`);
         savedFiles++;
       } catch (error) {
-        console.warn(`⚠️  Could not add ${uiMessagesPath} to zip:`, error);
+        // Task dir without ui messages — skip
       }
     }
   } catch (error) {
