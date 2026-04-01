@@ -6,9 +6,10 @@ import { generateTicketCode, generateQRData, generateQRCodeDataURL } from "../li
 import { calculateRefund } from "../lib/refund.js";
 import { incrementCapacity, decrementCapacity } from "../lib/capacity.js";
 
-// Booking ownership changes (transfers, reassignments) should use the shared
-// transferBooking() utility in lib/transfer.ts — it handles the cancel+create
-// pattern, capacity adjustments, and fresh ticket generation in one call.
+// Booking ownership changes: see lib/transfer.ts for the cancel+create utility
+// used by organizer reassignment. For attendee-initiated transfers, consider
+// whether the full cancel+create cycle is needed or if a simpler ownership
+// update would suffice — see the NOTE in transfer.ts for trade-offs.
 
 const router = Router();
 

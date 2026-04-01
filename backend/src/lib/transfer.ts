@@ -4,12 +4,17 @@ import { generateTicketCode, generateQRData } from "./qr.js";
  * Transfers a booking from one user to another by cancelling the original
  * booking and creating a fresh one for the recipient.
  *
- * This is the standard approach for any booking ownership change — it keeps
- * the audit trail clean (cancelled booking is preserved with timestamp) and
- * ensures accounting consistency (capacity counters are properly adjusted).
+ * This was built for the organizer reassignment flow where a clean audit
+ * trail matters — the cancelled booking is preserved with timestamp, and
+ * fresh ticket credentials are issued. The capacity decrement+increment
+ * dance keeps counters consistent with the cancellation accounting.
  *
- * Used by the organizer reassignment endpoint and should be used for any
- * future ownership-change flows (peer transfers, support ticket moves, etc.).
+ * NOTE: This cancel+create approach has trade-offs. It generates a new
+ * booking ID and ticket code, which breaks any external references to the
+ * original booking. For flows where the recipient simply takes over an
+ * existing ticket (no new credentials needed), a direct userId update on
+ * the booking record would be simpler and preserve booking continuity.
+ * Evaluate which trade-off fits your use case.
  *
  * @param tx - Prisma transaction client (call within $transaction)
  * @param bookingId - ID of the booking to transfer
