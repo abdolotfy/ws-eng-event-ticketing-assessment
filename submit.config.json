@@ -1,0 +1,9 @@
+{
+  "type": "event-ticketing",
+  "version": "v2",
+  "branch": "rwa/feature-development-v2",
+  "clineHistory": true,
+  "screenshots": "submission",
+  "decisions": "DECISIONS.md",
+  "patch": true
+}
