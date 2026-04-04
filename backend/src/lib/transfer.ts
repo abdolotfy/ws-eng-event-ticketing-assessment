@@ -1,25 +1,17 @@
 import { generateTicketCode, generateQRData } from "./qr.js";
 
 /**
- * Transfers a booking from one user to another by cancelling the original
- * booking and creating a fresh one for the recipient.
+ * Transfer Utility — ORGANIZER dashboard reassignment tool.
  *
- * This was built for the organizer reassignment flow where a clean audit
- * trail matters — the cancelled booking is preserved with timestamp, and
- * fresh ticket credentials are issued. The capacity decrement+increment
- * dance keeps counters consistent with the cancellation accounting.
+ * This helper was built for organizer-initiated seat reassignment (see dashboard.ts).
+ * It uses a cancel-and-recreate strategy: cancels the original booking, then creates
+ * a fresh one for the recipient. This means:
+ *   - New booking ID (breaks any external references to the original)
+ *   - New ticket code and QR data
+ *   - Triggers capacity decrement + increment (side effects if other features listen to capacity changes)
  *
- * NOTE: This cancel+create approach has trade-offs. It generates a new
- * booking ID and ticket code, which breaks any external references to the
- * original booking. For flows where the recipient simply takes over an
- * existing ticket (no new credentials needed), a direct userId update on
- * the booking record would be simpler and preserve booking continuity.
- * Evaluate which trade-off fits your use case.
- *
- * @param tx - Prisma transaction client (call within $transaction)
- * @param bookingId - ID of the booking to transfer
- * @param recipientId - User ID of the new owner
- * @returns The newly created booking for the recipient
+ * For attendee-initiated transfers, consider whether a simpler ownership update
+ * (booking.update({ userId })) better preserves booking continuity.
  */
 export async function transferBooking(
   tx: any,
