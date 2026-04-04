@@ -544,6 +544,58 @@ async function main() {
   });
   console.log(`Waitlisted: ${organizer2.name} -> ${chefTableEvent.name}`);
 
+  // ─── Sold-out event for transfer + waitlist constraint test ───
+  // Scenario: Bob has the only ticket, Carol is waitlisted.
+  // Test: When Bob transfers to Alice, Carol must NOT be promoted.
+  console.log("\nCreating sold-out event for constraint testing...\n");
+
+  const soldOutTestEvent = await prisma.event.create({
+    data: {
+      name: "Exclusive VIP Lounge Experience",
+      description: "An intimate evening with limited capacity. Perfect for testing edge cases.",
+      date: new Date("2026-08-20"),
+      time: "20:00",
+      venue: "The Velvet Room",
+      price: 150,
+      capacity: 1,
+      soldCount: 1,
+      status: "PUBLISHED",
+      refundPolicy: "FULL_REFUND",
+      organizerId: organizer1.id,
+    },
+  });
+  console.log(`Created sold-out event: ${soldOutTestEvent.name} (capacity: 1, sold: 1)`);
+
+  // Bob has the only ticket
+  const vipTicketCode = generateTicketCode();
+  await prisma.booking.create({
+    data: {
+      ticketCode: vipTicketCode,
+      qrCodeData: generateQRData(vipTicketCode),
+      status: "CONFIRMED",
+      pricePaid: 150,
+      discountAmount: 0,
+      userId: attendee2.id,
+      eventId: soldOutTestEvent.id,
+    },
+  });
+  console.log(`Booked: ${attendee2.name} -> ${soldOutTestEvent.name}`);
+
+  // Carol is on the waitlist
+  const carolVipWaitlist = generateTicketCode();
+  await prisma.booking.create({
+    data: {
+      ticketCode: carolVipWaitlist,
+      qrCodeData: generateQRData(carolVipWaitlist),
+      status: "WAITLISTED",
+      pricePaid: 0,
+      discountAmount: 0,
+      userId: attendee3.id,
+      eventId: soldOutTestEvent.id,
+    },
+  });
+  console.log(`Waitlisted: ${attendee3.name} -> ${soldOutTestEvent.name}`);
+
   console.log("\n--- Seeding complete! ---");
   console.log("\n--- Test Credentials ---");
   console.log("Organizers (password: organizer123):");
@@ -559,6 +611,7 @@ async function main() {
   console.log("Categories: MUSIC(3), WORKSHOP(2), CONFERENCE(2), COMEDY(1), SPORTS(1), OTHER(2)");
   console.log("Sold Out: Chef's Table Dinner (capacity 2, Alice + Bob)");
   console.log("Waitlisted: Carol + Mike Johnson on Chef's Table Dinner");
+  console.log("Constraint Test Event: VIP Lounge (capacity 1, Bob has ticket, Carol waitlisted)");
 }
 
 main()
