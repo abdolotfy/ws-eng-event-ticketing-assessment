@@ -41,35 +41,25 @@ As an **attendee**, I want to transfer my ticket to another registered user so t
 
 ## Acceptance Tests
 
-### Test 1: Transfer Form
-**Given:** Logged in as Attendee with a confirmed booking
-**When:** Navigate to ticket detail page and initiate transfer
-**Then:** [SCREENSHOT] Transfer form visible with email input field
-
-### Test 2: Successful Transfer
+### Test 1: Successful Transfer — Recipient Sees Ticket
 **Given:** Logged in as Attendee (e.g., alice@example.com)
-**When:** Enter valid recipient email (e.g., bob@example.com) and confirm transfer
-**Then:** [SCREENSHOT] Success message; ticket no longer in original attendee's bookings
+**When:** Transfer a confirmed ticket to another user (e.g., bob@example.com)
+**Then:** [SCREENSHOT] Log in as recipient — transferred ticket visible in their booking list
 
-### Test 3: Recipient Receives Ticket
-**Given:** Logged in as Recipient (e.g., bob@example.com)
-**When:** View bookings page
-**Then:** [SCREENSHOT] Transferred ticket visible in recipient's booking list
+### Test 2: Transfer Preserves Booking ID *(Constraint: Referential Integrity)*
+**Given:** Note the booking ID before transfer
+**When:** Transfer the ticket to another user
+**Then:** [SCREENSHOT] The booking ID in the recipient's view matches the original booking ID. The transfer must not destroy and recreate the booking — external systems (billing, analytics, support tickets) reference the original booking ID.
 
-### Test 4: Invalid Recipient
-**Given:** On transfer form
-**When:** Enter email of non-existent user
-**Then:** [SCREENSHOT] Appropriate error message displayed
-
-### Test 5: Already Cancelled Booking
+### Test 3: Cancelled Booking Cannot Be Transferred
 **Given:** Booking status is CANCELLED
 **When:** Attempt to transfer
-**Then:** [SCREENSHOT] Appropriate error message
+**Then:** [SCREENSHOT] Transfer is blocked with appropriate error message
 
-### Test 6: Transferred Ticket Details
+### Test 4: Valid QR Code on Transferred Ticket
 **Given:** Logged in as Recipient after receiving transfer
-**When:** View ticket detail page with QR code
-**Then:** [SCREENSHOT] Ticket detail page with valid QR code for check-in
+**When:** View ticket detail page
+**Then:** [SCREENSHOT] Valid QR code displayed for check-in
 
 ---
 
@@ -89,31 +79,37 @@ As an **attendee**, I want to join a waitlist for a sold-out event so that I can
 
 ## Acceptance Tests
 
-### Test 7: Join Waitlist on Sold-Out Event
+### Test 5: Join Waitlist on Sold-Out Event
 **Given:** Logged in as Attendee; viewing a sold-out event
 **When:** Click "Join Waitlist"
-**Then:** [SCREENSHOT] Confirmation that you've been added to the waitlist with your position
+**Then:** [SCREENSHOT] Confirmation that you've been added to the waitlist
 
-### Test 8: View Waitlist Position
-**Given:** Logged in as Attendee who is on the waitlist
-**When:** View bookings or event page
-**Then:** [SCREENSHOT] Current waitlist position is displayed
-
-### Test 9: Automatic Promotion on Cancel
+### Test 6: Automatic Promotion on Cancel
 **Given:** Event is sold out; carol@example.com is on the waitlist
 **When:** Another attendee cancels their booking for that event
 **Then:** [SCREENSHOT] Carol automatically receives a confirmed ticket (visible in her bookings)
 
-### Test 10: Leave Waitlist
+### Test 7: Transfer on Sold-Out Event Does NOT Trigger Waitlist Promotion *(Constraint: Cross-Feature Interaction)*
+**Given:** "Exclusive VIP Lounge Experience" is sold out (capacity 1). Bob has the only ticket. Carol is on the waitlist.
+**When:** Bob transfers his ticket to Alice
+**Then:** [SCREENSHOT] Carol is still on the waitlist — she has NOT been promoted to a confirmed ticket. The transfer changed ownership without freeing capacity, so no waitlist promotion should occur.
+
+### Test 8: Leave Waitlist
 **Given:** Logged in as Attendee who is on the waitlist
 **When:** Choose to leave the waitlist
 **Then:** [SCREENSHOT] Removed from waitlist; position no longer shown
 
 ---
 
+## Screenshots
+
+Take exactly these 8 screenshots and save them in the `submission/` folder. Name them `test1.png` through `test8.png` (or descriptive names like `test1-transfer-success.png`). Do not take additional screenshots beyond these 8.
+
+---
+
 # Submitting Your Work
 
 1. Place screenshots in the `submission` folder
-2. Name them descriptively: `test1-transfer-form.png`, `test7-join-waitlist.png`, `test9-auto-promotion.png`, etc.
+2. Name them descriptively: `test1-transfer-success.png`, `test5-join-waitlist.png`, `test6-auto-promotion.png`, etc.
 3. Document your reasoning and any questions in `DECISIONS.md`
 4. Follow submission instructions in README.md
