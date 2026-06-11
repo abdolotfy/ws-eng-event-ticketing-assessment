@@ -441,6 +441,169 @@ router.post("/", authenticate, async (req, res) => {
   }
 });
 
+// POST /api/bookings/:id/transfer - Transfer booking ownership
+router.post("/:id/transfer", authenticate, async (req, res) => {
+  try {
+    const recipientEmail =
+      typeof req.body?.recipientEmail === "string" ? req.body.recipientEmail.trim() : "";
+
+    if (!recipientEmail) {
+      return res.status(400).json({
+        success: false,
+        error: "VALIDATION_ERROR",
+        message: "recipientEmail is required",
+      });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findUnique({
+        where: { id: req.params.id as string },
+      });
+
+      if (!booking) {
+        throw new Error("NOT_FOUND:Booking not found");
+      }
+
+      if (booking.userId !== req.user!.userId) {
+        throw new Error("FORBIDDEN:You can only transfer your own bookings");
+      }
+
+      if (booking.status !== "CONFIRMED") {
+        throw new Error(
+          booking.status === "CANCELLED"
+            ? "INVALID_STATUS:Cancelled bookings cannot be transferred"
+            : "INVALID_STATUS:Only confirmed bookings can be transferred"
+        );
+      }
+
+      const recipient = await tx.user.findUnique({
+        where: { email: recipientEmail },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      });
+
+      if (!recipient) {
+        throw new Error("RECIPIENT_NOT_FOUND:No account found with that email address");
+      }
+
+      if (recipient.id === req.user!.userId) {
+        throw new Error("SELF_TRANSFER:You cannot transfer a ticket to yourself");
+      }
+
+      const existingRecipientBooking = await tx.booking.findFirst({
+        where: {
+          userId: recipient.id,
+          eventId: booking.eventId,
+          status: "CONFIRMED",
+        },
+      });
+
+      if (existingRecipientBooking) {
+        throw new Error("RECIPIENT_DUPLICATE:Recipient already has a ticket for this event");
+      }
+
+      const updatedBooking = await tx.booking.update({
+        where: { id: booking.id },
+        data: {
+          userId: recipient.id,
+        },
+        include: {
+          event: {
+            select: {
+              id: true,
+              name: true,
+              date: true,
+              time: true,
+              venue: true,
+              imageUrl: true,
+              status: true,
+              category: true,
+            },
+          },
+          seatTier: {
+            select: {
+              id: true,
+              name: true,
+              price: true,
+            },
+          },
+        },
+      });
+
+      return { updatedBooking, recipient };
+    });
+
+    res.json({
+      success: true,
+      message: "Ticket transferred successfully",
+      data: {
+        booking: result.updatedBooking,
+        recipient: result.recipient,
+      },
+    });
+  } catch (error: unknown) {
+    const err = error as Error;
+    console.error("Error transferring booking:", err);
+
+    if (err.message?.startsWith("NOT_FOUND:")) {
+      return res.status(404).json({
+        success: false,
+        error: "NOT_FOUND",
+        message: err.message.split(":")[1],
+      });
+    }
+
+    if (err.message?.startsWith("RECIPIENT_NOT_FOUND:")) {
+      return res.status(404).json({
+        success: false,
+        error: "NOT_FOUND",
+        message: err.message.split(":")[1],
+      });
+    }
+
+    if (err.message?.startsWith("FORBIDDEN:")) {
+      return res.status(403).json({
+        success: false,
+        error: "FORBIDDEN",
+        message: err.message.split(":")[1],
+      });
+    }
+
+    if (err.message?.startsWith("INVALID_STATUS:")) {
+      return res.status(400).json({
+        success: false,
+        error: "INVALID_STATUS",
+        message: err.message.split(":")[1],
+      });
+    }
+
+    if (err.message?.startsWith("SELF_TRANSFER:")) {
+      return res.status(400).json({
+        success: false,
+        error: "INVALID_TRANSFER",
+        message: err.message.split(":")[1],
+      });
+    }
+
+    if (err.message?.startsWith("RECIPIENT_DUPLICATE:")) {
+      return res.status(409).json({
+        success: false,
+        error: "DUPLICATE",
+        message: err.message.split(":")[1],
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: "INTERNAL_ERROR",
+      message: "Failed to transfer booking",
+    });
+  }
+});
+
 // DELETE /api/bookings/:id - Cancel booking with refund calculation
 router.delete("/:id", authenticate, async (req, res) => {
   try {
@@ -494,6 +657,31 @@ router.delete("/:id", authenticate, async (req, res) => {
 
       // Decrement capacity using centralized helper
       await decrementCapacity(tx, booking);
+
+      // Auto-promote the earliest matching waitlisted booking, if any
+      const waitlistedBooking = await tx.booking.findFirst({
+        where: {
+          eventId: booking.eventId,
+          status: "WAITLISTED",
+          ...(booking.seatTierId ? { seatTierId: booking.seatTierId } : {}),
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      });
+
+      if (waitlistedBooking) {
+        await tx.booking.update({
+          where: { id: waitlistedBooking.id },
+          data: {
+            status: "CONFIRMED",
+            pricePaid: booking.pricePaid,
+            updatedAt: new Date(),
+          },
+        });
+
+        await incrementCapacity(tx, booking.eventId, booking.seatTierId);
+      }
 
       // Restore promo code usage if one was applied
       if (booking.promoCodeId) {

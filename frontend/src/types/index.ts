@@ -180,6 +180,11 @@ export interface Attendee {
   user: { id: string; name: string; email: string };
 }
 
+export interface WaitlistPosition {
+  position: number;
+  bookingId: string;
+}
+
 export interface APIResponse<T = unknown> {
   success: boolean;
   data?: T;

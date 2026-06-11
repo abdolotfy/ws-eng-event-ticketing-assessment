@@ -192,6 +192,48 @@ export const bookingsAPI = {
     fetchAPI<{ success: boolean; data: { qrCode: string; ticketCode: string } }>(`/api/bookings/${id}/qr`, { token }),
 };
 
+export const transferTicket = (token: string, bookingId: string, recipientEmail: string) =>
+  fetchAPI<{
+    success: boolean;
+    message: string;
+    data: {
+      booking: import("@/types").Booking;
+      recipient: Pick<import("@/types").User, "id" | "name" | "email">;
+    };
+  }>(`/api/bookings/${bookingId}/transfer`, {
+    method: "POST",
+    body: JSON.stringify({ recipientEmail }),
+    token,
+  });
+
+export const joinWaitlist = (token: string, eventId: string, seatTierId?: string) =>
+  fetchAPI<{
+    success: boolean;
+    message: string;
+    data: {
+      booking: import("@/types").Booking;
+      position: number;
+    };
+  }>(`/api/waitlist/${eventId}`, {
+    method: "POST",
+    body: JSON.stringify(seatTierId ? { seatTierId } : {}),
+    token,
+  });
+
+export const leaveWaitlist = (token: string, eventId: string) =>
+  fetchAPI<{ success: boolean; message: string }>(`/api/waitlist/${eventId}`, {
+    method: "DELETE",
+    token,
+  });
+
+export const getWaitlistPosition = (token: string, eventId: string) =>
+  fetchAPI<{
+    success: boolean;
+    data: import("@/types").WaitlistPosition;
+  }>(`/api/waitlist/${eventId}/position`, {
+    token,
+  });
+
 // Dashboard API
 export const dashboardAPI = {
   getStats: (token: string) =>

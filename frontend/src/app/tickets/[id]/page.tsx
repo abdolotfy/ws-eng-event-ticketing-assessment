@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Booking } from "@/types";
 import { useAuth } from "@/contexts/AuthContext";
-import { bookingsAPI } from "@/lib/api";
+import { bookingsAPI, transferTicket } from "@/lib/api";
 import { formatDate, formatTime, formatCurrency } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { Spinner } from "@/components/ui/Spinner";
 import { Alert } from "@/components/ui/Alert";
 
@@ -20,6 +21,10 @@ export default function TicketPage() {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [recipientEmail, setRecipientEmail] = useState("");
+  const [transferError, setTransferError] = useState("");
+  const [transferSuccess, setTransferSuccess] = useState("");
+  const [isTransferring, setIsTransferring] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -40,8 +45,41 @@ export default function TicketPage() {
       .finally(() => setIsLoading(false));
   }, [user, token, authLoading, router, params.id]);
 
+  const handleTransfer = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!token || !booking) return;
+
+    if (!recipientEmail.trim()) {
+      setTransferError("Please enter a recipient email address");
+      return;
+    }
+
+    setIsTransferring(true);
+    setTransferError("");
+    setTransferSuccess("");
+
+    try {
+      const response = await transferTicket(token, booking.id, recipientEmail.trim());
+      setTransferSuccess(
+        `Ticket transferred successfully to ${response.data.recipient.email}. Redirecting to your bookings...`
+      );
+      setTimeout(() => {
+        router.push("/bookings");
+      }, 2000);
+    } catch (err) {
+      setTransferError(err instanceof Error ? err.message : "Failed to transfer ticket");
+    } finally {
+      setIsTransferring(false);
+    }
+  };
+
   if (authLoading || isLoading) {
-    return <div className="flex items-center justify-center min-h-[50vh]"><Spinner size="lg" /></div>;
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <Spinner size="lg" />
+      </div>
+    );
   }
 
   if (error || !booking) {
@@ -58,7 +96,7 @@ export default function TicketPage() {
 
   return (
     <div className="container py-8">
-      <div className="max-w-md mx-auto">
+      <div className="max-w-md mx-auto space-y-6">
         <Card>
           <CardContent className="text-center space-y-6 py-8">
             <div>
@@ -115,6 +153,37 @@ export default function TicketPage() {
                 Back to Bookings
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="space-y-4 py-6">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Transfer Ticket</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Send this ticket to another registered attendee by entering their email address.
+              </p>
+            </div>
+
+            {transferError && <Alert variant="error">{transferError}</Alert>}
+            {transferSuccess && <Alert variant="success">{transferSuccess}</Alert>}
+
+            <form onSubmit={handleTransfer} className="space-y-3">
+              <Input
+                type="email"
+                placeholder="Recipient email address"
+                value={recipientEmail}
+                onChange={(e) => {
+                  setRecipientEmail(e.target.value);
+                  setTransferError("");
+                  setTransferSuccess("");
+                }}
+                disabled={isTransferring}
+              />
+              <Button type="submit" className="w-full" isLoading={isTransferring}>
+                Transfer
+              </Button>
+            </form>
           </CardContent>
         </Card>
       </div>
